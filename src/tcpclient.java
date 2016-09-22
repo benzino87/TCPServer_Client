@@ -11,47 +11,75 @@ import java.util.Scanner;
 
 class tcpclient {
 
+	/**
+	 * Main method handles all operations with server.
+	 * 
+	 * Multi-threaded to handle both input and output streams from Server
+	 * 
+	 * @param args
+	 * @throws Exception
+	 * 
+	 */
+
 	public static void main(String args[]) throws Exception {
 
-		// Scanner s = new Scanner(System.in);
-		//
-		// System.out.println("Enter an IP address (ex: 127.0.0.1)");
-		// String IPAddress = s.nextLine();
-		//
-		// System.out.println("IP Address: " + IPAddress);
-		//
-		// System.out.println("Enter a port number");
-		// String incomingPortNumber = s.nextLine();
+		int portNumber = 9876;
+		String IP = "127.0.0.1";
+		// System.out.println("Port Number: " + portNumber);
 
-		try {
-			int portNumber = 9876;
-			String IP = "127.0.0.1";
-			System.out.println("Port Number: " + portNumber);
+		Socket clientSocket = new Socket(IP, portNumber);
 
-			Socket clientSocket = new Socket(IP, portNumber);
+		Thread sendToServer = new Thread(new Runnable() {
+			public void run() {
+				try {
 
-			DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+					DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+					BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
 
-			BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+					while (true) {
 
-			BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+						String messageToSend = inFromUser.readLine();
 
-			System.out.println("Enter a message: ");
+						outToServer.writeBytes(messageToSend + '\n');
 
-			String message = inFromUser.readLine();
+						if (messageToSend.equals("Quit")) {
+							clientSocket.close();
+							break;
+						}
+					}
 
-			outToServer.writeBytes(message + '\n');
+				} catch (Exception e) {
+					System.out.println("Something went wrong sending message");
+					e.printStackTrace();
+				}
 
-			while (true) {
-				String returnMessage = inFromServer.readLine();
-
-				System.out.println(returnMessage);
 			}
+		});
 
-			// clientSocket.close();
+		sendToServer.start();
 
-		} catch (Exception e) {
-			System.out.println("Not a valid port number");
-		}
+		Thread readFromServer = new Thread(new Runnable() {
+			public void run() {
+				try {
+
+					BufferedReader inFromServer = new BufferedReader(
+							new InputStreamReader(clientSocket.getInputStream()));
+
+					while (true) {
+
+						String message = inFromServer.readLine();
+
+						System.out.println("Server: " + message);
+					}
+				} catch (Exception e) {
+					System.out.println("Something went wrong recieving message");
+					e.printStackTrace();
+				}
+			}
+		});
+
+		readFromServer.start();
+
+		// clientSocket.close();
 	}
 }
